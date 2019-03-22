@@ -69,14 +69,14 @@ def deleteJenkinsJob():
 		mylogger.error("An error occured: " + str(e))
 		exit()
 
-def notificationsView():
+def notificationView():
 	mylogger.info("Notifications view")
 	try:
 		project = bucket.selectProject()
 		repo = bucket.selectRepo(project)
-		notifications = bucket.getNotifications(project=project, repo=repo)
-		for notification in notifications:
-			print('{:30}'.format(notification['name']) + notification['uuid'])
+		notification = bucket.selectNotification(project, repo)
+		pp(notification)
+		cprint("Press any key to continue", "green")
 	except Exception as e:
 		mylogger.error("An error occured: " + str(e))
 		exit()
@@ -85,10 +85,14 @@ def notificationCreate():
 	mylogger.info("Create notification")
 	try:
 		view = jenkins.selectView()
-		job = jenkins.selectJob(view)
-		token = jenkins.getJobDetails(job)['authToken']
-		url = jenkins.url + '/view/' + view + '/job/' + job + '/buildWithParameters?token=' + token + '&${EVERYTHING_URL}'
-		bucket.addNotification(url, jenkins_user, jenkins_password)
+		job = jenkins.selectJob(view['name'])
+		if job['_class'] == "org.jenkinsci.plugins.workflow.job.WorkflowJob":
+			mylogger.info("Pipeline detected. Getting token if exists.")
+			token = str(jenkins.getJobDetails(job)['flow-definition']['authToken'])
+			mylogger.info(token)
+		url = jenkins.url + '/view/' + view['name'] + '/job/' + job['name'] + '/buildWithParameters?token=' + token + '&${EVERYTHING_URL}'
+		mylogger.info("URL generated: " + url)
+		bucket.addNotification(url, config['jenkins']['user'], config['jenkins']['password'])
 	except Exception as e:
 		mylogger.error("An error occured: " + str(e))
 		exit()
@@ -100,7 +104,7 @@ def notificationDelete():
 		repo = bucket.selectRepo(project)
 		notification = bucket.selectNotification(project, repo)
 		pp(notification)
-		print(colored("Are you sure you want to delete this PR Notification? (Y/N) ", 'red'), end='')
+		cprint("Are you sure you want to delete this PR Notification? (Y/N) ", "red")
 		confirm = input()
 		confirm = confirm.upper()
 		if confirm == "Y":
@@ -134,7 +138,7 @@ while not finished:
 			deleteJenkinsView()
 			getch()
 		if option == 5:
-			notificationsView()
+			notificationView()
 			getch()
 		if option == 6:
 			notificationCreate()
@@ -145,12 +149,14 @@ while not finished:
 		elif option == 8:
 			mylogger.info("Exit")
 			finished = True
+			os.system('clear')
 			exit()
 		else:
 			pass
 	except:
 		if key == 'q':
 			mylogger.info("Exit")
+			os.system('clear')
 			exit()
 		else:
 			pass

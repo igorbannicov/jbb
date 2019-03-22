@@ -1,3 +1,4 @@
+import os
 import requests
 import json
 import logging
@@ -20,7 +21,7 @@ triggers_list = ['APPROVED',
  				 'UNAPPROVED',
                  'UPDATED']
 
-filters_list = ['PULL_REQUEST_TO_BRANCH', 'BUTTON_TRIGGER_TITLE']
+filters_list = ['NONE', 'PULL_REQUEST_TO_BRANCH', 'BUTTON_TRIGGER_TITLE']
 
 class BitBucketInstance:
 
@@ -131,34 +132,36 @@ class BitBucketInstance:
 
 	# Function to select triggers from list
 	def selectTriggers(self):
+		os.system('clear')
 		self.logger.info("Selecting triggers")
 		try:
 			ready = False
-			list = []
+			tlist = []
 			while not ready:
-				print(colored("Triggers: ", "green"))
+				cprint("Triggers: \n", "green")
 				for x in range(len(triggers_list)):
 					print('{:3}'.format(str(x)) + " -> " + triggers_list[x])
 				order = input("Select a trigger from list to add: ")
 				try:
-					list.append(triggers_list[int(order)])
+					tlist.append(triggers_list[int(order)])
 					confirm = input("Select another? (Y/N) ").upper()
 					if confirm != 'Y':
 						ready = True
 				except Exception as e:
 					self.logger.error("An error occured: " + str(e))
 					exit()
-			return list
+			return tlist
 		except Exception as e:
 			self.logger.error("An error occured: " + str(e))
 			exit()
 
 	# Function to select filters from list
 	def selectFilters(self, project, repo):
-		logger.info("Selecting filters")
+		self.logger.info("Selecting filters")
 		try:
 			ready = False
 			while not ready:
+				os.system('clear')
 				cprint("Filters available: \n", "green")
 				for x in range(len(filters_list)):
 					print('{:3}'.format(str(x)) + " -> " + filters_list[x])
@@ -166,6 +169,7 @@ class BitBucketInstance:
 				try:
 					# In case we want to filter by buttons
 					if filters_list[int(forder)] == 'BUTTON_TRIGGER_TITLE':
+						os.system('clear')
 						buttons_list = self.getButtons(project, repo)
 						cprint("\tButtons available: \n", "green")
 						for b in range(len(buttons_list)):
@@ -181,6 +185,7 @@ class BitBucketInstance:
 					# In case we want to filter by buttons
 					if filters_list[int(forder)] == 'PULL_REQUEST_TO_BRANCH':
 						branches_list = self.getBranches(project, repo)
+						os.system('clear')
 						cprint("\tBranches available: \n", "green")
 						for br in range(len(branches_list)):
 							print('{:3}'.format(str(br)) + " -> " + branches_list[br])
@@ -191,17 +196,20 @@ class BitBucketInstance:
 						except Exception as e:
 							self.logger.error("An error occured: " + str(e))
 							exit()
+					if filters_list[int(forder)] == 'NONE':
+						return None, None
 				except Exception as e:
 					self.logger.error("An error occured: " + str(e))
 					exit()
 		except Exception as e:
-			logger.error("An error occured: " + str(e))
+			self.logger.error("An error occured: " + str(e))
 			exit()
 		
 	# Function to select a project
 	def selectProject(self):
-		logger.info("Selecting project")
+		self.logger.info("Selecting project")
 		try:
+			os.system('clear')
 			cprint("Projects list:\n", "green")
 			projects = self.getProjects()
 			for p in range(len(projects)):
@@ -209,18 +217,18 @@ class BitBucketInstance:
 			order = input("Select a Bitbucket project from list: ")
 			try:
 				return projects[int(order)]
-			except Exception as exc:
-				cprint("An error occured.\n", 'red')
-				cprint(exc + '\n', 'red')
+			except Exception as e:
+				self.logger.error("An error occured: " + str(e))
 				exit()
 		except Exception as e:
-			logger.error("An error occured: " + str(e))
+			self.logger.error("An error occured: " + str(e))
 			exit()
 
 	# Function to select a repo
 	def selectRepo(self, project):
-		logger.info("Selecting repo from project "+project)
+		self.logger.info("Selecting repo from project "+project)
 		try:
+			os.system('clear')
 			cprint("Repositories list:\n", "green")
 			repos = self.getRepos(project)
 			for r in range(len(repos)):
@@ -228,18 +236,18 @@ class BitBucketInstance:
 			order = input("Select a Bitbucket repo from list: ")
 			try:
 				return repos[int(order)]
-			except Exception as exc:
-				cprint("An error occured.\n", 'red')
-				cprint(exc + '\n', 'red')
+			except Exception as e:
+				self.logger.error("An error occured: " + str(e))
 				exit()
 		except Exception as e:
-			logger.error("An error occured: " + str(e))
+			self.logger.error("An error occured: " + str(e))
 			exit()
 
 	# Function to select a notification
 	def selectNotification(self, project, repo):
-		logger.info("Selecting a notification from repo " + repo + ", project "+project)
+		self.logger.info("Selecting a notification from repo " + repo + ", project "+project)
 		try:
+			os.system('clear')
 			cprint("Notifications list:\n", "green")
 			notifications = self.getNotifications(project=project, repo=repo)
 			for x in range(len(notifications)):
@@ -247,28 +255,27 @@ class BitBucketInstance:
 			order = input("Select a notification from list: ")
 			try:
 				return notifications[int(order)]
-			except Exception as exc:
-				cprint("An error occured.\n", 'red')
-				cprint(exc + '\n', 'red')
+			except Exception as e:
+				self.logger.error("An error occured: " + str(e))
 				exit()
 		except Exception as e:
-			logger.error("An error occured: " + str(e))
+			self.logger.error("An error occured: " + str(e))
 			exit()
 
 	# Function to add a notification
 	def addNotification(self, url, user, password):
-		logger.info("Creating notification")
+		self.logger.info("Creating notification")
 		try:
 			u = urlparse(url)
 			jenkinsurl = u.scheme + '://' + u.netloc + '/view/crumbIssuer/api/xml?xpath=//crumb/text()'
 			notification = {}
-
+			os.system('clear')
 			cprint("Enter the data for new PR notification:\n", "green")
 			name = input("Name: ")
 			if name != "":
 				notification['name'] = name
 			else:
-				logger.error("Creating notification failed - name not specified")
+				self.logger.error("Creating notification failed - name not specified")
 				cprint("Notification name can not be empty.\n", "red")
 				exit()
 
@@ -292,28 +299,37 @@ class BitBucketInstance:
 			notification['projectKey'] = project
 			notification['repositorySlug'] = repo
 			fstring, fregexp = self.selectFilters(project, repo)
-			notification['filterString'] = '${' + fstring + '}'
-			notification['filterRegexp'] = fregexp
+			if fstring == None:
+				notification['filterString'] = ''
+			else:
+				notification['filterString'] = '${' + fstring + '}'
+			if fregexp == None:
+				notification['filterRegexp'] = ''
+			else:
+				notification['filterRegexp'] = fregexp
 			
 			try:
 				headers = {'Content-Type': 'application/json; charset=UTF-8', 'Accept': 'application/json, text/javascript, */*; q=0.01'}
 				data = json.dumps(notification, sort_keys=True)
+				os.system('clear')
 				cprint("Trying to create notification: ", "yellow")
 				rq = requests.post(self._napi_, auth=(self._user_, self._password_), data=data, headers=headers)
 				if rq.status_code == 200:
 					cprint("OK.\n", "green")
-					logger.info("Notification " + notification['name'] + " created for project " + project + ", repo " + repo)
+					self.logger.info("Notification " + notification['name'] + " created for project " + project + ", repo " + repo)
 				else:
 					cprint("FAIL!\n", "red")
 					cprint(str(rq.status_code) + "\n", "red")
-					logger.error("Creating notification failed: HTTP response " + str(rq.status_code))
-			except Exception as exct:
+					self.logger.error("Creating notification failed: HTTP response code" + str(rq.status_code))
+					self.logger.error("HTTP response body" + str(rq.text))
+				cprint("Press any key to continue", "yellow")
+			except Exception as e:
 				cprint("Notification could not be created.\n", "red")
 				pp(notification)
 				cprint("An error occured.\n", 'red')
 				cprint(str(exc) + '\n', 'red')
-				logger.error("Creating notification failed: " + str(exct))
+				self.logger.error("Creating notification failed: " + str(e))
 				exit()
 		except Exception as e:
-			logger.error("An error occured: " + str(e))
+			self.logger.error("An error occured: " + str(e))
 			exit()

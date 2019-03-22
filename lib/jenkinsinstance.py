@@ -1,3 +1,4 @@
+import os
 import requests
 import logging
 import xmltodict
@@ -87,6 +88,7 @@ class JenkinsInstance:
 			rq = requests.get(url, auth=(self.user, self.password))
 			for job in rq.json()['jobs']:
 				jobList.append(job)
+			self.logger.info("Done getting job list")
 			return jobList
 		except Exception as e:
 			self.logger.error("An error occured: " + str(e))
@@ -96,6 +98,7 @@ class JenkinsInstance:
 	def selectView(self):
 		self.logger.info("Select view ")
 		try:
+			os.system('clear')
 			cprint("Jenkins views list:\n", "green")
 			views = self.getViews()
 			for x in range(len(views)):
@@ -118,6 +121,7 @@ class JenkinsInstance:
 		self.logger.info("Select job from view "+view)
 		try:
 			found = False
+			os.system('clear')
 			cprint("Jenkins jobs selection:\n","green")
 			jobs = self.getJobsFromView(view)
 			while not found:
@@ -131,6 +135,7 @@ class JenkinsInstance:
 				try:
 					job = jobs[int(order)]
 					if job['_class'] != 'com.cloudbees.hudson.plugins.folder.Folder':
+						self.logger.info("Got job " + job['name'])
 						found = True
 						return job
 					else:
@@ -145,7 +150,7 @@ class JenkinsInstance:
 			exit()
 
 	def getJobDetails(self, job):
-		self.logger.info("Get details for job " + job)
+		self.logger.info("Get details for job " + job['name'])
 		try:
 			url = job['url'] + '/config.xml'
 			rq = requests.get(url, auth=(self.user, self.password))
