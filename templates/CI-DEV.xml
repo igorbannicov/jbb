@@ -1,0 +1,94 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@2.14.1">
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <jenkins.model.BuildDiscarderProperty>
+      <strategy class="hudson.tasks.LogRotator">
+        <daysToKeep>20</daysToKeep>
+        <numToKeep>20</numToKeep>
+        <artifactDaysToKeep>-1</artifactDaysToKeep>
+        <artifactNumToKeep>-1</artifactNumToKeep>
+      </strategy>
+    </jenkins.model.BuildDiscarderProperty>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>PULL_REQUEST_FROM_BRANCH</name>
+          <description></description>
+          <defaultValue></defaultValue>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>PULL_REQUEST_TO_BRANCH</name>
+          <description></description>
+          <defaultValue></defaultValue>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>PULL_REQUEST_TO_SSH_CLONE_URL</name>
+          <description></description>
+          <defaultValue></defaultValue>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+    <org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+      <triggers/>
+    </org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.52">
+    <script>node {
+    timestamps {
+        this.notifyBitbucket(&apos;INPROGRESS&apos;)
+        try {
+            stage(&apos;Clean workspace&apos;) {
+                cleanWs()
+            }
+            stage(&apos;Clone source&apos;) {
+                checkout([$class: &apos;GitSCM&apos;, 
+                branches: [[name: &apos;${PULL_REQUEST_FROM_BRANCH}&apos;]], 
+                doGenerateSubmoduleConfigurations: false, 
+                extensions: [[$class: &apos;PreBuildMerge&apos;, options: [mergeRemote: &apos;origin&apos;, mergeTarget: &apos;${PULL_REQUEST_TO_BRANCH}&apos;]]], 
+                submoduleCfg: [], 
+                userRemoteConfigs: [[credentialsId: &apos;jenkins_bitbucket&apos;, 
+                url: &apos;${PULL_REQUEST_TO_SSH_CLONE_URL}&apos;]]])
+            }
+            stage(&apos;Build&apos;) {
+                sh &quot;mvn clean&quot;
+                sh &quot;mvn install&quot;
+            }
+            stage(&apos;SonarQube Checks&apos;) {
+                withSonarQubeEnv {
+                    sh &quot;mvn sonar:sonar -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=878391296ff37fe98d1cca9c4ef27fd76c7326e8&quot;
+                }
+            }
+            stage(&apos;Deploy to Nexus3&apos;) {
+                sh &quot;mvn deploy&quot;
+            }
+            this.notifyBitbucket(&apos;SUCCESS&apos;)
+        } catch(err) {
+            this.notifyBitbucket(&apos;FAILED&apos;)
+        }
+    }
+}
+
+def notifyBitbucket(String state) {
+    if(&apos;SUCCESS&apos; == state || &apos;FAILED&apos; == state) {
+        currentBuild.result = state         // Set result of currentBuild !Important!
+    }
+    notifyBitbucket commitSha1: &quot;&quot;, 
+    credentialsId: &apos;jenkins_bitbucket_with_pass&apos;, 
+    disableInprogressNotification: false, 
+    considerUnstableAsSuccess: true, 
+    ignoreUnverifiedSSLPeer: true, 
+    includeBuildNumberInKey: false, 
+    prependParentProjectKey: false, 
+    projectKey: &apos;&apos;, 
+    stashServerBaseUrl: &apos;https://bitbucket.endava.com&apos;
+}
+</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <authToken></authToken>
+  <disabled>false</disabled>
+</flow-definition>

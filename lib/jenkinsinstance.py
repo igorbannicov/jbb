@@ -10,25 +10,7 @@ from .utils import *
 
 
 class JenkinsInstance:
-	EMPTY_CONFIG = '''<?xml version='1.0' encoding='UTF-8'?>
-						<project>
-							<actions/>
-							<description/>
-							<keepDependencies>false</keepDependencies>
-							<properties/>
-							<scm class="hudson.scm.NullSCM"/>
-							<canRoam>true</canRoam>
-							<disabled>false</disabled>
-							<blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
-							<blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
-							<authToken></authToken>
-							<triggers/>
-							<concurrentBuild>false</concurrentBuild>
-							<builders/>
-							<publishers/>
-							<buildWrappers/>
-						</project>'''
-	JOB_TYPES = ['NONE', 'PR', 'CI-DEV', 'CI-QA']
+	JOB_TYPES = ['NONE', 'PR', 'CI-DEV', 'CI-QA', 'FOLDER']
 
 	# Initialize connection
 	def __init__(self, url='http://localhost:8080', user = 'admin', password = 'admin'):
@@ -325,17 +307,26 @@ class JenkinsInstance:
 		self.logger = logging.getLogger("M::Jenkins::ParseJobXML")
 		self.logger.info("Starting")
 		try:
+			if type == 'NONE':
+				tpath = 'templates/Empty.xml'
 			if type == 'PR':
-				tree = et.parse('templates/PR.xml')
-				tree = tree.getroot()
-				m = hashlib.md5()
-				letters = string.ascii_lowercase
-				rdata = ''.join(random.choice(letters) for i in range(12)).encode('utf-8')
-				m.update(rdata)
-				token = m.hexdigest()
-				tree.find('authToken').text = token
-				self.logger.info('XML Parsed')
-				return tree
+				tpath = 'templates/PR.xml'
+			if type == 'CI-DEV':
+				tpath = 'templates/CI-DEV.xml'
+			if type == 'CI-QA':
+				tpath = 'templates/CI-QA.xml'
+			if type == 'FOLDER':
+				tpath = 'templates/Folder.xml'
+			tree = et.parse(tpath)
+			tree = tree.getroot()
+			m = hashlib.md5()
+			letters = string.ascii_lowercase
+			rdata = ''.join(random.choice(letters) for i in range(12)).encode('utf-8')
+			m.update(rdata)
+			token = m.hexdigest()
+			tree.find('authToken').text = token
+			self.logger.info('XML Parsed')
+			return tree
 		except Exception as e:
 			self.logger.error("An error occured: " + str(e))
 			exit()
