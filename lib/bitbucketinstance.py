@@ -28,7 +28,7 @@ class BitBucketInstance:
 
 	def __init__(self, url='http://localhost:8080', user = 'admin', password = 'admin'):
 		u = urlparse(url)
-		self.logger = logging.getLogger("M::BitBucket")
+		self.logger = logging.getLogger("M::Bitbucket")
 		self._url_ = u.netloc
 		self._user_ = user
 		self._password_ = password
@@ -39,7 +39,8 @@ class BitBucketInstance:
 
 	# Get list of all available projects
 	def getProjects(self):
-		self.logger.info("Getting projects list")
+		self.logger = logging.getLogger("M::Bitbucket::GetProjects")
+		self.logger.info("Starting")
 		try:
 			plist = []
 			url = self._api_ + 'projects/'
@@ -54,7 +55,8 @@ class BitBucketInstance:
 
 	# Get list of all available repos in a project
 	def getRepos(self, project):
-		self.logger.info("Getting repos list from "+project)
+		self.logger = logging.getLogger("M::Bitbucket::GetRepos")
+		self.logger.info("Starting")
 		try:
 			rlist = []
 			url = self._api_ + 'projects/' + project + '/repos?limit=999'
@@ -69,7 +71,8 @@ class BitBucketInstance:
 
 	# Get list of all available repos in a project
 	def getBranches(self, project, repo):
-		self.logger.info("Getting branches list from "+project+" project, "+repo+" repo")
+		self.logger = logging.getLogger("M::Bitbucket::GetBranches")
+		self.logger.info("Starting")
 		try:
 			brlist = []
 			url = self._api_ + 'projects/' + project + '/repos/' + repo + '/branches'
@@ -84,7 +87,8 @@ class BitBucketInstance:
 
 	# Get list of all available PR notifications for a repo
 	def getNotifications(self, project, repo):
-		self.logger.info("Getting notifications list from "+project+" project, "+repo+" repo")
+		self.logger = logging.getLogger("M::Bitbucket::GetNotifications")
+		self.logger.info("Starting")
 		try:
 			notifications = []
 			rq = requests.get(self._napi_, auth=(self._user_, self._password_))
@@ -98,7 +102,8 @@ class BitBucketInstance:
 
 	# Get list of all available PR notifications for a repo
 	def getButtons(self, project, repo):
-		self.logger.info("Getting buttons list from "+project+" project, "+repo+" repo")
+		self.logger = logging.getLogger("M::Bitbucket::GetButtons")
+		self.logger.info("Starting")
 		try:
 			buttons = []
 			rq = requests.get(self._bapi_, auth=(self._user_, self._password_))
@@ -112,7 +117,8 @@ class BitBucketInstance:
 
 	# Delete PR notifications by uuid
 	def deleteNotification(self, uuid):
-		self.logger.info("Deleting notification with uuid "+uuid)
+		self.logger = logging.getLogger("M::Bitbucket::DeleteNotification")
+		self.logger.info("Starting")
 		try:
 			url = self._napi_ + "/" + uuid
 			rq = requests.delete(url, auth=(self._user_, self._password_))
@@ -122,7 +128,8 @@ class BitBucketInstance:
 
 	# Update PR notifications by uuid
 	def updateNotification(self, uuid, payload):
-		self.logger.info("Updating notification with uuid "+uuid)
+		self.logger = logging.getLogger("M::Bitbucket::UpdateNotification")
+		self.logger.info("Starting")
 		try:
 			url = self._napi_ + "/" + uuid
 			rq = requests.post(url, auth=(self._user_, self._password_))
@@ -132,8 +139,9 @@ class BitBucketInstance:
 
 	# Function to select triggers from list
 	def selectTriggers(self):
+		self.logger = logging.getLogger("M::Bitbucket::SelectTriggers")
+		self.logger.info("Starting")
 		os.system('clear')
-		self.logger.info("Selecting triggers")
 		try:
 			ready = False
 			tlist = []
@@ -157,7 +165,8 @@ class BitBucketInstance:
 
 	# Function to select filters from list
 	def selectFilters(self, project, repo):
-		self.logger.info("Selecting filters")
+		self.logger = logging.getLogger("M::Bitbucket::SelectFilters")
+		self.logger.info("Starting")
 		try:
 			ready = False
 			while not ready:
@@ -207,7 +216,8 @@ class BitBucketInstance:
 		
 	# Function to select a project
 	def selectProject(self):
-		self.logger.info("Selecting project")
+		self.logger = logging.getLogger("M::Bitbucket::SelectProject")
+		self.logger.info("Starting")
 		try:
 			os.system('clear')
 			cprint("Projects list:\n", "green")
@@ -226,7 +236,8 @@ class BitBucketInstance:
 
 	# Function to select a repo
 	def selectRepo(self, project):
-		self.logger.info("Selecting repo from project "+project)
+		self.logger = logging.getLogger("M::Bitbucket::SelectRepo")
+		self.logger.info("Starting")
 		try:
 			os.system('clear')
 			cprint("Repositories list:\n", "green")
@@ -245,7 +256,8 @@ class BitBucketInstance:
 
 	# Function to select a notification
 	def selectNotification(self, project, repo):
-		self.logger.info("Selecting a notification from repo " + repo + ", project "+project)
+		self.logger = logging.getLogger("M::Bitbucket::SelectNotification")
+		self.logger.info("Starting")
 		try:
 			os.system('clear')
 			cprint("Notifications list:\n", "green")
@@ -264,7 +276,8 @@ class BitBucketInstance:
 
 	# Function to add a notification
 	def addNotification(self, url, user, password):
-		self.logger.info("Creating notification")
+		self.logger = logging.getLogger("M::Bitbucket::AddNotification")
+		self.logger.info("Starting")
 		try:
 			u = urlparse(url)
 			jenkinsurl = u.scheme + '://' + u.netloc + '/view/crumbIssuer/api/xml?xpath=//crumb/text()'

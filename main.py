@@ -53,7 +53,7 @@ def viewJenkinsJob():
 def createJenkinsJob():
 	mylogger.info("Create Jenkins job")
 	try:
-		print("Not implemented yet.")
+		jenkins.createJob()
 	except Exception as e:
 		mylogger.error("An error occured: " + str(e))
 		exit()
