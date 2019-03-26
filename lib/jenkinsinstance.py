@@ -180,7 +180,7 @@ class JenkinsInstance:
 			view = views[int(order)]
 			self.logger.info("Selected view")
 			if view['name'] != 'all':
-				path = path + '/views/' + view['name']
+				path = path + '/view/' + view['name']
 			jobs = self.getJobsFromView(view['name'])
 
 			while not found:
@@ -254,13 +254,15 @@ class JenkinsInstance:
 			self.logger = logging.getLogger("M::Jenkins::CreateJob")
 			crumb = self._crumb_()
 			headers = {'Jenkins-Crumb': crumb, 'Content-Type': 'application/xml'}
+			self.logger = logging.getLogger("M::Jenkins::CreateJob")
 			url = self.url + jpath + "/createItem?name=" + jname
 			self.logger.info(url)
 			self.logger.info(headers)
 			self.logger.info(xmltodict.parse(jdata))
 			rq = requests.post(url, auth=(self.user, self.password), data=jdata, headers=headers)
-			
 			response = rq.status_code
+			self.logger.info(rq.status_code)
+			self.logger.info(rq.text)
 			if response == 200:
 				return True
 			else:
