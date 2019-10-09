@@ -83,7 +83,7 @@ def notifyBitbucket(String state) {
     includeBuildNumberInKey: false, 
     prependParentProjectKey: false, 
     projectKey: &apos;&apos;, 
-    stashServerBaseUrl: &apos;https://bitbucket.endava.com&apos;
+    stashServerBaseUrl: &apos;https://bitbucket.company.com&apos;
 }
 </script>
     <sandbox>true</sandbox>

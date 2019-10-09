@@ -1,3 +1,4 @@
 jenkins
 termcolor
 xmltodict
+configparser

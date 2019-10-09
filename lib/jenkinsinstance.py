@@ -1,6 +1,8 @@
 import os
+import ast
 import random
 import string
+import json
 import hashlib
 import requests
 import logging
@@ -16,18 +18,16 @@ class JenkinsInstance:
 	def __init__(self, url='http://localhost:8080', user = 'admin', password = 'admin'):
 		self.logger = logging.getLogger("M::Jenkins")
 		self.url = url
-		self.user = user
-		self.password = password
 		self.logger.info("Module initialized")
+		self.session = requests.Session()
+		self.session.auth = (user, password)
 
-	def _crumb_(self):
-		self.logger = logging.getLogger("M::Jenkins::_CRUMB_")
-		self.logger.info("Starting")
-		url = self.url + "/crumbIssuer/api/xml?xpath=//crumb"
-		rq = requests.get(url, auth=(self.user, self.password))
-		crumb = xmltodict.parse(rq.text)
-		self.logger.info(crumb['crumb'])
-		return crumb['crumb']
+	def crumb(self):
+		url = self.url + '/crumbIssuer/api/xml?xpath=(//crumb)'
+		rq = self.session.get(url)
+		crumb = xmltodict.parse(rq.text)['crumb']
+		self.logger.info(crumb)
+		return crumb
 
 	# Returns a Jenkins views list
 	def getViews(self):
@@ -35,7 +35,7 @@ class JenkinsInstance:
 		self.logger.info("Starting")
 		try:
 			url = self.url + '/api/json'
-			rq = requests.get(url, auth=(self.user, self.password))
+			rq = self.session.get(url)
 			return rq.json()['views']
 		except Exception as e:
 			self.logger.error("An error occured: " + str(e))
@@ -47,7 +47,7 @@ class JenkinsInstance:
 		try:
 			jobs = []
 			url = self.url + '/api/json'
-			rq = requests.get(url, auth=(self.user, self.password))
+			rq = self.session.get(url)
 			for job in rq.json()['jobs']:
 				if job['_class'] != 'com.cloudbees.hudson.plugins.folder.Folder':
 					jobs.append(job)
@@ -62,7 +62,7 @@ class JenkinsInstance:
 		try:
 			folders = []
 			url = self.url + '/api/json'
-			rq = requests.get(url, auth=(self.user, self.password))
+			rq = self.session.get(url)
 			for job in rq.json()['jobs']:
 				if job['_class'] == 'com.cloudbees.hudson.plugins.folder.Folder':
 					folders.append(job)
@@ -78,7 +78,7 @@ class JenkinsInstance:
 		try:
 			jobList = []
 			url = self.url + '/view/' + view + '/api/json'
-			rq = requests.get(url, auth=(self.user, self.password))
+			rq = self.session.get(url)
 			for job in rq.json()['jobs']:
 				jobList.append(job)
 			self.logger.info("Done getting job list")
@@ -87,14 +87,35 @@ class JenkinsInstance:
 			self.logger.error("An error occured: " + str(e))
 			exit()
 
-	# Returns a list of Jenkins jobs from Jenkins view config (XML)
+	# Returns a list of Jenkins jobs from Jenkins folder
+	def getJobsFromFolder(self, folder):
+		self.logger = logging.getLogger("M::Jenkins::GetJobsFromFolder")
+		self.logger.info("Starting")
+		try:
+			jobList = []
+			folderList = []
+			url = folder['url'] + '/api/json'
+			rq = self.session.get(url)
+			for item in rq.json()['jobs']:
+				if item['_class'] != 'com.cloudbees.hudson.plugins.folder.Folder':
+					jobList.append(item)
+				if item['_class'] == 'com.cloudbees.hudson.plugins.folder.Folder':
+					folderList.append(item)
+			self.logger.info("Done getting job list")
+			return jobList, folderList
+		except Exception as e:
+			self.logger.error("An error occured: " + str(e))
+			exit()
+
+	# Returns a list of Jenkins jobs from Jenkins path
 	def getJobsFromPath(self, path):
 		self.logger = logging.getLogger("M::Jenkins::GetJobsFromPath")
 		self.logger.info("Starting")
 		try:
 			jobList = []
 			url = self.url + path + '/api/json'
-			rq = requests.get(url, auth=(self.user, self.password))
+			print(url)
+			rq = self.session.get(url)
 			for job in rq.json()['jobs']:
 				jobList.append(job)
 			self.logger.info("Done getting job list")
@@ -151,7 +172,7 @@ class JenkinsInstance:
 						return job
 					else:
 						url = self.url + '/view/' + view + '/job/' + job['name'] + '/api/json'
-						rq = requests.get(url, auth=(self.user, self.password))
+						rq = self.session.get(url)
 						jobs = rq.json()['jobs']
 				except Exception as e:
 					self.logger.error("An error occured: " + str(e))
@@ -159,8 +180,6 @@ class JenkinsInstance:
 		except Exception as e:
 			self.logger.error("An error occured: " + str(e))
 			exit()
-
-
 
 	# Select path in Jenkins
 	def selectPath(self):
@@ -216,20 +235,65 @@ class JenkinsInstance:
 			self.logger.error("An error occured in creation job: " + str(e))
 			exit()
 
-
-
-
 	def getJobDetails(self, job):
 		self.logger = logging.getLogger("M::Jenkins::GetJobDetails")
 		self.logger.info("Starting")
 		try:
 			url = job['url'] + '/config.xml'
-			rq = requests.get(url, auth=(self.user, self.password))
-			data = xmltodict.parse(rq.text)
-			return data
+			rq = self.session.get(url)
+			#data = xmltodict.parse(rq.text)
+			return rq.text
 		except Exception as e:
 			self.logger.error("An error occured: " + str(e))
 			exit()
+
+	def createFolder(self, name, path):
+		#curl -XPOST 'http://jenkins/createItem?
+		#name=FolderName&
+		#mode=com.cloudbees.hudson.plugins.folder.Folder&
+		#from=&json=%7B%22name%22%3A%22FolderName%22%2C%22mode%22%3A%22com.cloudbees.hudson.plugins.folder.Folder%22%2C%22from%22%3A%22%22%2C%22Submit%22%3A%22OK%22%7D&Submit=OK' --user 'user.name:YourAPIToken' -H "Content-Type:application/x-www-form-urlencoded"
+		try:
+			headers = {'Content-Type': 'application/json'}
+			self.logger = logging.getLogger("M::Jenkins::CreateListView")
+			url = self.url + path +"/createItem?name="+name+"&mode=com.cloudbees.hudson.plugins.folder.Folder&Submit=OK"
+			self.logger.info(url)
+			self.logger.info(headers)
+			rq = self.session.post(url, headers=headers)
+			response = rq.status_code
+			self.logger.info(rq.status_code)
+			if response == 200:
+				return True
+			else:
+				return False
+		except Exception as e:
+			self.logger.error("An error occured: " + str(e))
+			exit()
+
+	def createNewJob(self, name, dirpath, urlpath):
+		self.logger = logging.getLogger("M::Jenkins::CreateNewJob")
+		self.logger.info("Starting")
+		try:
+			tree = et.parse(dirpath)
+			xml = tree.getroot()
+			data = et.tostring(xml, encoding='utf8', method='xml')
+			self.logger = logging.getLogger("M::Jenkins::CreateNewJob")
+			headers = {'Content-Type': 'application/xml'}
+			self.logger = logging.getLogger("M::Jenkins::CreateNewJob")
+			url = self.url + urlpath + "/createItem?name=" + name
+			self.logger.info(url)
+			self.logger.info(headers)
+			rq = self.session.post(url, data=data, headers=headers)
+			response = rq.status_code
+			self.logger.info(rq.status_code)
+			self.logger.info(rq.text)
+			if response == 200:
+				return True
+			else:
+				return False
+		except Exception as e:
+			self.logger.error("An error occured: " + str(e))
+			exit()
+
 
 	def createJob(self):
 		self.logger = logging.getLogger("M::Jenkins::CreateJob")
@@ -252,14 +316,13 @@ class JenkinsInstance:
 			self.logger = logging.getLogger("M::Jenkins::CreateJob")
 			jpath = self.selectPath()
 			self.logger = logging.getLogger("M::Jenkins::CreateJob")
-			crumb = self._crumb_()
-			headers = {'Jenkins-Crumb': crumb, 'Content-Type': 'application/xml'}
+			headers = {'Content-Type': 'application/xml'}
 			self.logger = logging.getLogger("M::Jenkins::CreateJob")
 			url = self.url + jpath + "/createItem?name=" + jname
 			self.logger.info(url)
 			self.logger.info(headers)
 			self.logger.info(xmltodict.parse(jdata))
-			rq = requests.post(url, auth=(self.user, self.password), data=jdata, headers=headers)
+			rq = self.session.post(url, data=jdata, headers=headers)
 			response = rq.status_code
 			self.logger.info(rq.status_code)
 			self.logger.info(rq.text)
@@ -271,14 +334,35 @@ class JenkinsInstance:
 			self.logger.error("An error occured: " + str(e))
 			exit()
 
+	def createListView(self, name):
+		self.logger = logging.getLogger("M::Jenkins::CreateListView")
+		self.logger.info("Starting")
+		try:
+			headers = {'Content-Type': 'application/json'}
+			url = self.url + "/createView?name="+name+"&mode=hudson.model.ListView&Submit=OK"
+			self.logger.info(url)
+			self.logger.info(headers)
+			self.logger.info("Sending requests")
+			rq = self.session.post(url, headers=headers)
+			response = rq.status_code
+			self.logger.info(rq.status_code)
+			self.logger.info(rq.text)
+			if response == 200:
+				return True
+			else:
+				return False
+		except Exception as e:
+			self.logger.error("An error occured: " + str(e))
+			exit()
+
+
 	def deleteJob(self, job):
 		self.logger = logging.getLogger("M::Jenkins::DeleteJob")
 		self.logger.info("Starting")
 		try:
-			crumb = self._crumb_()
-			headers = {'Jenkins-Crumb': crumb, 'Content-Type': 'application/xml'}
+			headers = {'Content-Type': 'application/xml'}
 			url = job['url'] + "/doDelete"
-			rq = requests.post(url, auth=(self.user, self.password), headers=headers)
+			rq = self.session.post(url, headers=headers)
 			response = rq.status_code
 			if response == 200:
 				return True
@@ -292,10 +376,9 @@ class JenkinsInstance:
 		self.logger = logging.getLogger("M::Jenkins::DeleteView")
 		self.logger.info("Starting")
 		try:
-			crumb = self._crumb_()
-			headers = {'Jenkins-Crumb': crumb, 'Content-Type': 'application/xml; charset=utf-8', 'Content-Type': 'text/xml; charset=utf-8'}
+			headers = {'Content-Type': 'application/xml; charset=utf-8', 'Content-Type': 'text/xml; charset=utf-8'}
 			url = view['url'] + "/doDelete"
-			rq = requests.post(url, auth=(self.user, self.password), headers=headers)
+			rq = self.session.post(url, headers=headers)
 			response = rq.status_code
 			if response == 200:
 				return True
@@ -332,5 +415,3 @@ class JenkinsInstance:
 		except Exception as e:
 			self.logger.error("An error occured: " + str(e))
 			exit()
-
-		
